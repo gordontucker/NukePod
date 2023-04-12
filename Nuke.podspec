@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
     s.name             = 'Nuke'
-    s.version          = '12.1.0.1'
+    s.version          = '12.1.0.2'
     s.summary          = 'A powerful image loading and caching system'
     s.description  = <<-EOS
     A powerful image loading and caching system which makes simple tasks like loading images into views extremely simple, while also supporting more advanced features for more demanding apps.
@@ -19,13 +19,13 @@ Pod::Spec.new do |s|
       s.source_files = 'Sources/Nuke/**/*.swift'
     end
     
-    s.subspec 'NukeExtensions' do |s|
-      s.dependency 'Core'
+    s.subspec 'Extensions' do |s|
+      s.dependency 'Nuke/Core'
       s.source_files = 'Sources/NukeExtensions/**/*.swift'
     end
      
-    s.subspec 'NukeVideo' do |s|
-      s.dependency 'Core'
+    s.subspec 'Video' do |s|
+      s.dependency 'Nuke/Core'
       s.source_files = 'Sources/NukeVideo/**/*.swift'
     end
 end
