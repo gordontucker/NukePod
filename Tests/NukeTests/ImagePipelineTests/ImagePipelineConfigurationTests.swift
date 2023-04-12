@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 //
-// Copyright (c) 2015-2022 Alexander Grebenyuk (github.com/kean).
+// Copyright (c) 2015-2023 Alexander Grebenyuk (github.com/kean).
 
 import XCTest
 @testable import Nuke
@@ -47,7 +47,7 @@ class ImagePipelineConfigurationTests: XCTestCase {
 
         // When/Then
         let expectation = self.expectation(description: "Image Loaded")
-        pipeline.loadImage(with: Test.url, progress: { _, _, _ in
+        pipeline.loadImage(with: Test.request, progress: { _, _, _ in
             XCTAssertNotNil(DispatchQueue.getSpecific(key: queueKey))
         }, completion: { _ in
             XCTAssertNotNil(DispatchQueue.getSpecific(key: queueKey))

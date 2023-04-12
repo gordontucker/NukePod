@@ -1,4 +1,144 @@
+# Nuke 12
+
+## Nuke 12.1.0
+
+*Mar 25, 2023*
+
+- Add `makeImageView` closure to `LazyImageView` to allow using custom views for rendering images
+- Add `onCompletion` closure to `LazyImage` and `FetchImage`
+- Fix an issue with `.videoAssetKey` value missing from `ImageContainer`
+- Fix an issue with `.gif` being encoded as `.jpeg` when `.storeEncodedImages` policy is used 
+
+## Nuke 12.0.0
+
+*Mar 4, 2023*
+
+Nuke 12 enhances the two main APIs introduced in the previous release: `LazyImage` and the async `ImagePipeline` methods. They are faster, more robust, and easier to use.
+
+> The [migration guide](https://github.com/kean/Nuke/blob/nuke-12/Documentation/Migrations/Nuke%2012%20Migration%20Guide.md) is available to help with the update. The minimum requirements are unchanged from Nuke 11.
+
+## Concurrency
+
+Redesign the concurrency APIs making them more ergonomic and fully `Sendable` compliant.
+
+- Add `ImagePipeline/imageTask(with:)` method that returns a new type `AsyncImageTask`
+
+```swift
+let task = ImagePipeline.shared.imageTask(with: URL(string: "example.com"))
+task.priority = .high
+for await progress in task.progress {
+    print("Updated progress: ", progress)
+}
+let image = try await task.image
+```
+
+- The existing convenience `ImagePipeline/image(for:)` method now returns an image instead of `ImageResponse`
+- Remove the `delegate` parameter from `ImagePipeline/image(for:)` method to address the upcoming concurrency warnings in Xcode 14.3
+- Remove `ImageTaskDelegate` and move its methods to `ImagePipelineDelegate` and add the `pipeline` parameter
+
+## NukeUI 2.0
+
+NukeUI started as a separate [repo](https://github.com/kean/NukeUI), but the initial production version was released as part of [Nuke 11](https://github.com/kean/Nuke/releases/tag/11.0.0). Let's call it NukeUI 1.0. The framework was designed before the [`AsyncImage`](https://developer.apple.com/documentation/swiftui/asyncimage) announcement and had a few discrepancies that made it harder to migrate from `AsyncImage`. This release addresses the shortcomings of the original design and features a couple of performance improvements.
+
+- `LazyImage` now uses `SwiftUI.Image` instead of `NukeUI.Image` backed by `UIImageView` and `NSImageView`. It eliminates any [discrepancies](https://github.com/kean/Nuke/issues/578) between `LazyImage` and `AsyncImage` layout and self-sizing behavior and fixes issues with `.redacted(reason:)`, `ImageRenderer`, and other SwiftUI APIs that don't work with UIKIt and AppKit based views.
+- Remove `NukeUI.Image` so the name no longer [clashes](https://github.com/kean/Nuke/discussions/658) with `SwiftUI.Image`
+- Fix [#669](https://github.com/kean/Nuke/issues/669): `redacted` not working for `LazyImage`
+- GIF rendering is no longer included in the framework. Please consider using one of the frameworks that specialize in playing GIFs, such as [Gifu](https://github.com/kaishin/Gifu). It's easy to integrate, especially with `LazyImage`.
+- Extract progress updates from `FetchImage` to a separate observable object, reducing the number of body reloads
+- `LazyImage` now requires a single body calculation to render the response from the memory cache (instead of three before)
+- Disable animations by default
+- Fix an issue where the image won't reload if you change only `LazyImage` `processors` or `priority` without also changing the image source
+- `FetchImage/image` now returns `Image` instead of `UIImage`
+- Make `_PlatformImageView` internal (was public) and remove more typealiases
+
+## Nuke
+
+- Add a new initializer to `ImageRequest.ThumbnailOptions` that accepts the target size, unit, and content mode - [#677](https://github.com/kean/Nuke/pull/677)
+- ImageCache uses 20% of available RAM which is quite aggressive. It's an OK default on iOS because it clears 90% of the used RAM when entering the background to be a good citizen. But it's not a good default on a Mac. Starting with Nuke 12, the default size is now strictly limited to 512 MB.
+- `ImageDecoder` now defaults to scale `1` for images (configurable using [`UserInfoKey/scaleKey`](https://kean-docs.github.io/nuke/documentation/nuke/imagerequest/userinfokey/scalekey))
+- Removes APIs deprecated in the previous versions
+- Update the [Performance Guide](https://kean-docs.github.io/nuke/documentation/nuke/performance-guide)
+
+## NukeVideo
+
+Video playback can be significantly [more efficient](https://web.dev/replace-gifs-with-videos/) than playing animated GIFs. This is why the initial version of NukeUI provided support for basic video playback. But it is not something that the majority of the users need, so this feature was extracted to a separate module called `NukeVideo`.
+
+There is now less code that you need to include in your project, which means faster compile time and smaller code size. With this and some other changes in Nuke 12, the two main frameworks – Nuke and NukeUI – now have 25% less code compared to Nuke 11. In addition to this change, there are a couple of improvements in how the precompiled binary frameworks are generated, significantly reducing their size.
+
+- Move all video-related code to `NukeVideo`
+- Remove `ImageContainer.asset`. The asset is now added to `ImageContainer/userInfo` under the new `.videoAssetKey`.
+- Reduce the size of binary frameworks by up to 50%
+
 # Nuke 11
+
+## Nuke 11.6.4
+
+*Feb 19, 2023*
+
+- Fix [#671](https://github.com/kean/Nuke/pull/671): `ImagePipeline/image(for:)` hangs if you cancel the async Task before it is started 
+
+## Nuke 11.6.3
+
+*Feb 18, 2023*
+
+- Fix warnings in Xcode 14.3
+
+## Nuke 11.6.2
+
+*Feb 9, 2023*
+
+- Fix an issue with static GIFs not rendered correctly – [#667](https://github.com/kean/Nuke/pull/667) by [@Havhingstor](https://github.com/Havhingstor)
+
+## Nuke 11.6.1
+
+*Feb 5, 2023*
+
+- Fix [#653](https://github.com/kean/Nuke/issues/653): ImageView wasn't calling `prepareForReuse` on its `animatedImageView`
+
+## Nuke 11.6.0
+
+*Jan 27, 2023*
+
+- Fix [#579](https://github.com/kean/Nuke/issues/579): `ImageEncoders.ImageIO` losing image orientation - [#643](https://github.com/kean/Nuke/pull/643)
+- Deprecate previously soft-deprecated `ImageRequestConvertible` - [#642](https://github.com/kean/Nuke/pull/642)
+- Add `isCompressionEnabled` option to `DataCache` that enables compression using Apple’s [lzfse](https://en.wikipedia.org/wiki/LZFSE) algorithm
+- Add `ExpressibleByStringLiteral` conformance to `ImageRequest`
+- Make compatible with Swift 6 mode
+
+## Nuke 11.5.3
+
+*Jan 4, 2023*
+
+- Remove DocC files to address https://github.com/kean/Nuke/issues/609
+
+## Nuke 11.5.1
+
+*Dec 25, 2022*
+
+- Fix `ImagePipeline.shared` warning with Strit Concurrency Checking set to Complete
+- Fix an issue where `ImagePrefetcher/didComplete` wasn't called in some scenarios
+- `ImagePrefetcher/didComplete` is now called on the main queue
+
+## Nuke 11.5.0
+
+*Dec 17, 2022*
+
+- `DataLoader/delegate` now gets called for all `URLSession/delegate` methods, not just the ones required by [Pulse](https://github.com/kean/Pulse). It allows you to modify `DataLoader` behavior in new ways, e.g. for handling authentication challenges.
+- Add new unit tests, thanks to [@zzmasoud](https://github.com/zzmasoud) - [#626](https://github.com/kean/Nuke/pull/626)
+- Fix an issue with `ImagePrefetcher/didComplete` not being called when images are in the memory cache, thanks to [@0xceed](https://github.com/0xceed) - [#635](https://github.com/kean/Nuke/pull/635)
+- Move .docc folders back to Sources/, so that the Nuke docs are now again available in Xcode
+
+## Nuke 11.4.1
+
+*Dec 15, 2022*
+
+- Correct the release commit/branch
+
+## Nuke 11.4.0
+
+*Dec 14, 2022*
+
+- Add `isVideoFrameAnimationEnabled` option to NukeUI views, thanks to [@maciesielka](https://github.com/maciesielka) 
 
 ## Nuke 11.3.1
 
@@ -19,7 +159,7 @@
 
 - Fix an issue with Mac Catalyst on Xcode 14.0  
 
-## Nuke 11.2
+## Nuke 11.2.0
 
 *Sep 10, 2022*
 
@@ -37,7 +177,7 @@
 - Fix an issue where `AVPlayerLayer` was created eagerly
 - Disable `prepareForDisplay` by default and add a configuration option to enable it
 
-## Nuke 11.0
+## Nuke 11.1.0
 
 *Aug 7, 2022*
 

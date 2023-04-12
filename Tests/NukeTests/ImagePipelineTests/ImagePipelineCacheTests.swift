@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 //
-// Copyright (c) 2015-2022 Alexander Grebenyuk (github.com/kean).
+// Copyright (c) 2015-2023 Alexander Grebenyuk (github.com/kean).
 
 import XCTest
 @testable import Nuke
@@ -456,9 +456,41 @@ class ImagePipelineCacheTests: XCTestCase {
         XCTAssertNil(diskCache.cachedData(for: cache.makeDataCacheKey(for: request)))
     }
 
-    // MARK: ImageRequestConvertible
+    // MARK: - Image Orientation
 
-    func testMakeSureAllAPIsAreAvailable() {
-        cache[ImageRequest(url: URL(string: "https://example.com/image.jpeg")!)] = nil
+#if canImport(UIKit)
+    func testThatImageOrientationIsPreserved() throws {
+        // GIVEN opaque jpeg with orientation
+        let image = Test.image(named: "left-orientation", extension: "jpeg")
+        XCTAssertTrue(image.cgImage!.isOpaque)
+        XCTAssertEqual(image.imageOrientation, .right)
+        
+        // WHEN
+        let pipeline = ImagePipeline(configuration: .withDataCache)
+        pipeline.cache.storeCachedImage(ImageContainer(image: image), for: Test.request, caches: [.disk])
+        let cached = pipeline.cache.cachedImage(for: Test.request, caches: [.disk])!.image
+        
+        // THEN orientation is preserved
+        XCTAssertTrue(cached.cgImage!.isOpaque)
+        XCTAssertEqual(cached.imageOrientation, .right)
     }
+    
+    func testThatImageOrientationIsPreservedForProcessedImages() throws {
+        // GIVEN opaque jpeg with orientation
+        let image = Test.image(named: "left-orientation", extension: "jpeg")
+        XCTAssertTrue(image.cgImage!.isOpaque)
+        XCTAssertEqual(image.imageOrientation, .right)
+        
+        let resized = try XCTUnwrap(ImageProcessors.Resize(width: 100).process(image))
+        
+        // WHEN
+        let pipeline = ImagePipeline(configuration: .withDataCache)
+        pipeline.cache.storeCachedImage(ImageContainer(image: resized), for: Test.request, caches: [.disk])
+        let cached = pipeline.cache.cachedImage(for: Test.request, caches: [.disk])!.image
+        
+        // THEN orientation is preserved
+        XCTAssertTrue(cached.cgImage!.isOpaque)
+        XCTAssertEqual(cached.imageOrientation, .right)
+    }
+#endif
 }

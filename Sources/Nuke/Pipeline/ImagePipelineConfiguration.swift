@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 //
-// Copyright (c) 2015-2022 Alexander Grebenyuk (github.com/kean).
+// Copyright (c) 2015-2023 Alexander Grebenyuk (github.com/kean).
 
 import Foundation
 
@@ -77,11 +77,11 @@ extension ImagePipeline {
         /// ```swift
         /// let url = URL(string: "http://example.com/image")
         /// pipeline.loadImage(with: ImageRequest(url: url, processors: [
-        ///     ImageProcessors.Resize(size: CGSize(width: 44, height: 44)),
-        ///     ImageProcessors.GaussianBlur(radius: 8)
+        ///     .resize(size: CGSize(width: 44, height: 44)),
+        ///     .gaussianBlur(radius: 8)
         /// ]))
         /// pipeline.loadImage(with: ImageRequest(url: url, processors: [
-        ///     ImageProcessors.Resize(size: CGSize(width: 44, height: 44))
+        ///     .resize(size: CGSize(width: 44, height: 44))
         /// ]))
         /// ```
         ///
@@ -212,34 +212,39 @@ extension ImagePipeline {
 
     /// Determines what images are stored in the disk cache.
     public enum DataCachePolicy: Sendable {
-        /// For requests with processors, encode and store processed images.
-        /// For requests with no processors, store original image data, unless
-        /// the resource is local (file:// or data:// scheme is used).
+        /// Store original image data for requests with no processors. Store
+        /// _only_ processed images for requests with processors.
         ///
-        /// - important: With this policy, the pipeline ``ImagePipeline/loadData(with:completion:)`` method
-        /// will not store the images in the disk cache for requests with
+        /// - note: Store only processed images for local resources (file:// or
+        /// data:// URL scheme).
+        ///
+        /// - important: With this policy, the pipeline's ``ImagePipeline/loadData(with:completion:)-6cwk3``
+        /// method will not store the images in the disk cache for requests with
         /// any processors applied – this method only loads data and doesn't
         /// decode images.
         case automatic
 
-        /// For all requests, only store the original image data, unless
-        /// the resource is local (file:// or data:// scheme is used).
+        /// Store only original image data.
+        ///
+        /// - note: If the resource is local (file:// or data:// URL scheme),
+        /// data isn't stored.
         case storeOriginalData
 
-        /// For all requests, encode and store decoded images after all
-        /// processors are applied.
+        /// Encode and store images.
         ///
         /// - note: This is useful if you want to store images in a format
         /// different than provided by a server, e.g. decompressed. In other
         /// scenarios, consider using ``automatic`` policy instead.
         ///
-        /// - important: With this policy, the pipeline ``ImagePipeline/loadData(with:completion:)`` method
-        /// will not store the images in the disk cache – this method only
+        /// - important: With this policy, the pipeline's ``ImagePipeline/loadData(with:completion:)-6cwk3``
+        /// method will not store the images in the disk cache – this method only
         /// loads data and doesn't decode images.
         case storeEncodedImages
 
-        /// For requests with processors, encode and store processed images.
-        /// For all requests, store original image data.
+        /// Stores both processed images and the original image data.
+        ///
+        /// - note: If the resource is local (has file:// or data:// scheme),
+        /// only the processed images are stored.
         case storeAll
     }
 }

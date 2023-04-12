@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 //
-// Copyright (c) 2015-2022 Alexander Grebenyuk (github.com/kean).
+// Copyright (c) 2015-2023 Alexander Grebenyuk (github.com/kean).
 
 import XCTest
 import Combine
@@ -90,8 +90,6 @@ class ImagePipelinePublisherTests: XCTestCase {
         }
     }
 
-    // MARK: ImageRequestConvertible
-
     func testInitWithURL() {
         _ = pipeline.imagePublisher(with: URL(string: "https://example.com/image.jpeg")!)
     }
@@ -112,7 +110,7 @@ class ImagePipelinePublisherProgressiveDecodingTests: XCTestCase {
 
         dataLoader = MockProgressiveDataLoader()
         imageCache = MockImageCache()
-        ResumableDataStorage.shared.removeAll()
+        ResumableDataStorage.shared.removeAllResponses()
 
         pipeline = ImagePipeline {
             $0.dataLoader = dataLoader

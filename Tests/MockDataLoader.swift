@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 //
-// Copyright (c) 2015-2022 Alexander Grebenyuk (github.com/kean).
+// Copyright (c) 2015-2023 Alexander Grebenyuk (github.com/kean).
 
 import Foundation
 import Nuke
@@ -18,7 +18,7 @@ class MockDataLoader: DataLoading, @unchecked Sendable {
     static let DidStartTask = Notification.Name("com.github.kean.Nuke.Tests.MockDataLoader.DidStartTask")
     static let DidCancelTask = Notification.Name("com.github.kean.Nuke.Tests.MockDataLoader.DidCancelTask")
 
-    var createdTaskCount = 0
+    @Atomic var createdTaskCount = 0
     var results = [URL: Result<(Data, URLResponse), NSError>]()
     let queue = OperationQueue()
     var isSuspended: Bool {

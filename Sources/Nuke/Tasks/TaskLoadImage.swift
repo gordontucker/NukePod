@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 //
-// Copyright (c) 2015-2022 Alexander Grebenyuk (github.com/kean).
+// Copyright (c) 2015-2023 Alexander Grebenyuk (github.com/kean).
 
 import Foundation
 
@@ -39,7 +39,7 @@ final class TaskLoadImage: ImagePipelineTask<ImageResponse> {
         let data = signpost("ReadCachedProcessedImageData") {
             pipeline.cache.cachedData(for: request)
         }
-        async {
+        pipeline.queue.async {
             if let data = data {
                 self.didReceiveCachedData(data)
             } else {
@@ -69,7 +69,7 @@ final class TaskLoadImage: ImagePipelineTask<ImageResponse> {
             operation = pipeline.configuration.imageDecodingQueue.add { [weak self] in
                 guard let self = self else { return }
                 let response = decode()
-                self.async {
+                self.pipeline.queue.async {
                     self.didDecodeCachedData(response)
                 }
             }
@@ -156,7 +156,9 @@ final class TaskLoadImage: ImagePipelineTask<ImageResponse> {
         let context = ImageProcessingContext(request: request, response: response, isCompleted: isCompleted)
         dependency2 = pipeline.makeTaskProcessImage(key: key, process: {
             try signpost("ProcessImage", isCompleted ? "FinalImage" : "ProgressiveImage") {
-                try response.map { try processor.process($0, context: context) }
+                var response = response
+                response.container = try processor.process(response.container, context: context)
+                return response
             }
         }).subscribe(priority: priority) { [weak self] event in
             guard let self = self else { return }
@@ -200,7 +202,7 @@ final class TaskLoadImage: ImagePipelineTask<ImageResponse> {
                 self.pipeline.delegate.decompress(response: response, request: self.request, pipeline: self.pipeline)
             }
 
-            self.async {
+            self.pipeline.queue.async {
                 self.storeImageInCaches(response, isFromDiskCache: isFromDiskCache)
                 self.send(value: response, isCompleted: isCompleted)
             }
@@ -231,7 +233,7 @@ final class TaskLoadImage: ImagePipelineTask<ImageResponse> {
         guard !response.container.isPreview else {
             return
         }
-        guard let dataCache = pipeline.delegate.dataCache(for: request, pipeline: pipeline), shouldStoreFinalImageInDiskCache() else {
+        guard let dataCache = pipeline.delegate.dataCache(for: request, pipeline: pipeline), shouldStoreImageInDiskCache() else {
             return
         }
         let context = ImageEncodingContext(request: request, image: response.image, urlResponse: response.urlResponse)
@@ -254,11 +256,20 @@ final class TaskLoadImage: ImagePipelineTask<ImageResponse> {
         }
     }
 
-    private func shouldStoreFinalImageInDiskCache() -> Bool {
-        guard request.url?.isCacheable ?? false else {
+    private func shouldStoreImageInDiskCache() -> Bool {
+        guard !(request.url?.isLocalResource ?? false) else {
             return false
         }
-        let policy = pipeline.configuration.dataCachePolicy
-        return ((policy == .automatic || policy == .storeAll) && !request.processors.isEmpty) || policy == .storeEncodedImages
+        let isProcessed = !request.processors.isEmpty
+        switch pipeline.configuration.dataCachePolicy {
+        case .automatic:
+            return isProcessed
+        case .storeOriginalData:
+            return false
+        case .storeEncodedImages:
+            return isProcessed || imageTasks.contains { $0.request.processors.isEmpty }
+        case .storeAll:
+            return isProcessed
+        }
     }
 }

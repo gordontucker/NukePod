@@ -1,10 +1,10 @@
 // The MIT License (MIT)
 //
-// Copyright (c) 2015-2022 Alexander Grebenyuk (github.com/kean).
+// Copyright (c) 2015-2023 Alexander Grebenyuk (github.com/kean).
 
 import Foundation
 
-/// Receives data from ``TaskLoadImageData` and decodes it as it arrives.
+/// Receives data from ``TaskLoadImageData`` and decodes it as it arrives.
 final class TaskFetchDecodedImage: ImagePipelineTask<ImageResponse> {
     private var decoder: (any ImageDecoding)?
 
@@ -53,7 +53,7 @@ final class TaskFetchDecodedImage: ImagePipelineTask<ImageResponse> {
                 guard let self = self else { return }
 
                 let result = decode()
-                self.async {
+                self.pipeline.queue.async {
                     self.didFinishDecoding(decoder: decoder, context: context, result: result)
                 }
             }

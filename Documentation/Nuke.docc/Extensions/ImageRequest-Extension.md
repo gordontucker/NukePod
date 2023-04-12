@@ -18,6 +18,7 @@ request.processors = [.resize(width: 320)]
 - ``init(urlRequest:processors:priority:options:userInfo:)``
 - ``init(id:data:processors:priority:options:userInfo:)``
 - ``init(id:dataPublisher:processors:priority:options:userInfo:)``
+- ``init(stringLiteral:)``
 
 ### Options
 
@@ -39,7 +40,3 @@ request.processors = [.resize(width: 320)]
 - ``url``
 - ``imageId``
 - ``description``
-
-### Deprecated 
-
-- ``ImageRequestConvertible``

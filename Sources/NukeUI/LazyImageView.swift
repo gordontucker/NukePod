@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 //
-// Copyright (c) 2015-2021 Alexander Grebenyuk (github.com/kean).
+// Copyright (c) 2015-2023 Alexander Grebenyuk (github.com/kean).
 
 import Foundation
 import Nuke
@@ -99,8 +99,19 @@ public final class LazyImageView: _PlatformBaseView {
 
     // MARK: Underlying Views
 
+#if os(macOS)
     /// Returns the underlying image view.
-    public let imageView = ImageView()
+    public let imageView = NSImageView()
+#else
+    public let imageView = UIImageView()
+#endif
+
+    /// Creates a custom view for displaying the given image response.
+    ///
+    /// Return `nil` to use the default platform image view.
+    public var makeImageView: ((ImageContainer) -> _PlatformBaseView?)?
+
+    private var customImageView: _PlatformBaseView?
 
     // MARK: Managing Image Tasks
 
@@ -149,8 +160,6 @@ public final class LazyImageView: _PlatformBaseView {
     // MARK: Other Options
 
     /// `true` by default. If disabled, progressive image scans will be ignored.
-    ///
-    /// This option also affects the previews for animated images or videos.
     public var isProgressiveImageRenderingEnabled = true
 
     /// `true` by default. If enabled, the image view will be cleared before the
@@ -185,12 +194,7 @@ public final class LazyImageView: _PlatformBaseView {
 
         placeholderView = {
             let view = _PlatformBaseView()
-            let color: _PlatformColor
-            if #available(iOS 13.0, *) {
-                color = .secondarySystemBackground
-            } else {
-                color = _PlatformColor.lightGray.withAlphaComponent(0.5)
-            }
+            let color = _PlatformColor.secondarySystemBackground
 #if os(macOS)
             view.wantsLayer = true
             view.layer?.backgroundColor = color.cgColor
@@ -214,13 +218,6 @@ public final class LazyImageView: _PlatformBaseView {
     public var request: ImageRequest? {
         didSet { load(request) }
     }
-    ///
-    // Deprecated in Nuke 11.0
-    @available(*, deprecated, message: "Please `request` or `url` properties instead")
-    public var source: (any ImageRequestConvertible)? {
-        get { request }
-        set { request = newValue?.asImageRequest() }
-    }
 
     override public func updateConstraints() {
         super.updateConstraints()
@@ -233,8 +230,10 @@ public final class LazyImageView: _PlatformBaseView {
     public func reset() {
         cancel()
 
-        imageView.imageContainer = nil
+        imageView.image = nil
         imageView.isHidden = true
+
+        customImageView?.removeFromSuperview()
 
         setPlaceholderViewHidden(true)
         setFailureViewHidden(true)
@@ -267,7 +266,7 @@ public final class LazyImageView: _PlatformBaseView {
             return
         }
 
-        if let processors = self.processors, !processors.isEmpty, !request.processors.isEmpty {
+        if let processors = self.processors, !processors.isEmpty, request.processors.isEmpty {
             request.processors = processors
         }
         if let priority = self.priority {
@@ -338,8 +337,14 @@ public final class LazyImageView: _PlatformBaseView {
     private func display(_ container: ImageContainer, isFromMemory: Bool) {
         resetIfNeeded()
 
-        imageView.imageContainer = container
-        imageView.isHidden = false
+        if let view = makeImageView?(container) {
+            addSubview(view)
+            view.pinToSuperview()
+            customImageView = view
+        } else {
+            imageView.image = container.image
+            imageView.isHidden = false
+        }
 
         if !isFromMemory, let transition = transition {
             runTransition(transition, container)

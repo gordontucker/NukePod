@@ -1,12 +1,13 @@
 // The MIT License (MIT)
 //
-// Copyright (c) 2015-2022 Alexander Grebenyuk (github.com/kean).
+// Copyright (c) 2015-2023 Alexander Grebenyuk (github.com/kean).
 
 import XCTest
 import Nuke
 
 class DataCachePeformanceTests: XCTestCase {
     var cache: DataCache!
+    var count = 1000
 
     override func setUp() {
         super.setUp()
@@ -22,15 +23,12 @@ class DataCachePeformanceTests: XCTestCase {
     }
 
     func testReadFlushedPerformance() {
-        for idx in 0..<1000 {
-            cache["\(idx)"] = Data(repeating: 1, count: 256 * 1024)
-        }
-        cache.flush()
+        populate()
 
         let queue = OperationQueue()
         queue.maxConcurrentOperationCount = 2
         measure {
-            for idx in 0..<1000 {
+            for idx in 0..<count {
                 queue.addOperation {
                     _ = self.cache["\(idx)"]
                 }
@@ -38,4 +36,41 @@ class DataCachePeformanceTests: XCTestCase {
             queue.waitUntilAllOperationsAreFinished()
         }
     }
+
+    func testReadFlushedPerformanceSync() {
+        populate()
+
+        measure {
+            for idx in 0..<count {
+                _ = self.cache["\(idx)"]
+            }
+        }
+    }
+
+    func testReadFlushedPerformanceWithCompression() {
+        cache.isCompressionEnabled = true
+        count = 100
+
+        populate()
+
+        measure {
+            for idx in 0..<count {
+                _ = self.cache["\(idx)"]
+            }
+        }
+    }
+
+    func populate() {
+        for idx in 0..<count {
+            cache["\(idx)"] = generateRandomData()
+        }
+        cache.flush()
+    }
+}
+
+private func generateRandomData(count: Int = 256 * 1024) -> Data {
+    var bytes = [UInt8](repeating: 0, count: count)
+    let status = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+    assert(status == errSecSuccess)
+    return Data(bytes)
 }

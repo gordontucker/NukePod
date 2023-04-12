@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 //
-// Copyright (c) 2015-2022 Alexander Grebenyuk (github.com/kean).
+// Copyright (c) 2015-2023 Alexander Grebenyuk (github.com/kean).
 
 import XCTest
 @testable import Nuke
@@ -116,7 +116,7 @@ class ImagePipelineLoadDataTests: XCTestCase {
         }
 
         // WHEN
-        let record = expect(pipeline).toLoadData(with: URL(string: "http://example.com/invalid url"))
+        let record = expect(pipeline).toLoadData(with: ImageRequest(url: URL(string: "http://example.com/invalid url")))
         wait()
 
         // THEN
@@ -212,7 +212,7 @@ extension ImagePipelineLoadDataTests {
         }
 
         // WHEN
-        pipeline.resgiterMultipleRequests {
+        pipeline.registerMultipleRequests {
             expect(pipeline).toLoadData(with: ImageRequest(url: Test.url, processors: [MockImageProcessor(id: "p1")]))
             expect(pipeline).toLoadData(with: ImageRequest(url: Test.url))
         }
@@ -276,7 +276,7 @@ extension ImagePipelineLoadDataTests {
         }
 
         // WHEN
-        pipeline.resgiterMultipleRequests {
+        pipeline.registerMultipleRequests {
             expect(pipeline).toLoadData(with: ImageRequest(url: Test.url, processors: [MockImageProcessor(id: "p1")]))
             expect(pipeline).toLoadData(with: ImageRequest(url: Test.url))
         }
@@ -402,7 +402,7 @@ extension ImagePipelineLoadDataTests {
         }
 
         // WHEN
-        pipeline.resgiterMultipleRequests {
+        pipeline.registerMultipleRequests {
             expect(pipeline).toLoadData(with: ImageRequest(url: Test.url, processors: [MockImageProcessor(id: "p1")]))
             expect(pipeline).toLoadData(with: ImageRequest(url: Test.url))
         }
@@ -419,7 +419,7 @@ extension ImagePipelineLoadDataTests {
 }
 
 extension ImagePipeline {
-    func resgiterMultipleRequests(_ closure: () -> Void) {
+    func registerMultipleRequests(_ closure: () -> Void) {
         configuration.dataLoadingQueue.isSuspended = true
         closure()
         queue.sync {} // Important!

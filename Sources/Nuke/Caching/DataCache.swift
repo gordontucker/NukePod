@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 //
-// Copyright (c) 2015-2022 Alexander Grebenyuk (github.com/kean).
+// Copyright (c) 2015-2023 Alexander Grebenyuk (github.com/kean).
 
 import Foundation
 
@@ -57,6 +57,17 @@ public final class DataCache: DataCaching, @unchecked Sendable {
     /// other subsystems for the resources.
     private var initialSweepDelay: TimeInterval = 10
 
+    /// Enables compression. Disabled by default.
+    ///
+    /// Enabling compression significantly decreases disk usage allowing you
+    /// to store more images or reduce the cache size limit.
+    ///
+    /// - warning: There is a significant performance hit associated with compression.
+    ///
+    /// - note: If enabled, uses `lzfse` compression algorithm that offers
+    /// optimal performance on Apple platforms.
+    public var isCompressionEnabled = false
+
     // Staging
 
     private let lock = NSLock()
@@ -97,16 +108,6 @@ public final class DataCache: DataCaching, @unchecked Sendable {
         self.path = path
         self.filenameGenerator = filenameGenerator
         try self.didInit()
-
-        #if TRACK_ALLOCATIONS
-        Allocations.increment("DataCache")
-        #endif
-    }
-
-    deinit {
-        #if TRACK_ALLOCATIONS
-        Allocations.decrement("ImageCache")
-        #endif
     }
 
     /// A `FilenameGenerator` implementation which uses SHA1 hash function to
@@ -137,7 +138,7 @@ public final class DataCache: DataCaching, @unchecked Sendable {
         guard let url = url(for: key) else {
             return nil
         }
-        return try? Data(contentsOf: url)
+        return try? decompressed(Data(contentsOf: url))
     }
 
     /// Returns `true` if the cache contains the data for the given key.
@@ -177,7 +178,7 @@ public final class DataCache: DataCaching, @unchecked Sendable {
     /// Removes all items. The method returns instantly, the data is removed
     /// asynchronously.
     public func removeAll() {
-        stage { staging.removeAll() }
+        stage { staging.removeAllStagedChanges() }
     }
 
     private func stage(_ change: () -> Void) {
@@ -318,15 +319,31 @@ public final class DataCache: DataCaching, @unchecked Sendable {
         switch change.type {
         case let .add(data):
             do {
-                try data.write(to: url)
+                try compressed(data).write(to: url)
             } catch let error as NSError {
                 guard error.code == CocoaError.fileNoSuchFile.rawValue && error.domain == CocoaError.errorDomain else { return }
                 try? FileManager.default.createDirectory(at: self.path, withIntermediateDirectories: true, attributes: nil)
-                try? data.write(to: url) // re-create a directory and try again
+                try? compressed(data).write(to: url) // re-create a directory and try again
             }
         case .remove:
             try? FileManager.default.removeItem(at: url)
         }
+    }
+
+    // MARK: Compression
+
+    private func compressed(_ data: Data) throws -> Data {
+        guard isCompressionEnabled else {
+            return data
+        }
+        return try (data as NSData).compressed(using: .lzfse) as Data
+    }
+
+    private func decompressed(_ data: Data) throws -> Data {
+        guard isCompressionEnabled else {
+            return data
+        }
+        return try (data as NSData).decompressed(using: .lzfse) as Data
     }
 
     // MARK: Sweep
@@ -478,7 +495,7 @@ private struct Staging {
         changes[key] = Change(key: key, id: nextChangeId, type: .remove)
     }
 
-    mutating func removeAll() {
+    mutating func removeAllStagedChanges() {
         nextChangeId += 1
         changeRemoveAll = ChangeRemoveAll(id: nextChangeId)
         changes.removeAll()

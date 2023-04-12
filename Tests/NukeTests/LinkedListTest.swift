@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 //
-// Copyright (c) 2015-2022 Alexander Grebenyuk (github.com/kean).
+// Copyright (c) 2015-2023 Alexander Grebenyuk (github.com/kean).
 
 import XCTest
 @testable import Nuke
@@ -99,7 +99,7 @@ class LinkedListTests: XCTestCase {
         list.append(3)
 
         // When
-        list.removeAll()
+        list.removeAllElements()
 
         // Then
         XCTAssertNil(list.first)

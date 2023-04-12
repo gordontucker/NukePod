@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 //
-// Copyright (c) 2015-2022 Alexander Grebenyuk (github.com/kean).
+// Copyright (c) 2015-2023 Alexander Grebenyuk (github.com/kean).
 
 import Foundation
 
@@ -44,7 +44,7 @@ final class TaskFetchOriginalImageData: ImagePipelineTask<(Data, URLResponse?)> 
                 guard let self = self else {
                     return finish()
                 }
-                self.async {
+                self.pipeline.queue.async {
                     self.loadData(urlRequest: urlRequest, finish: finish)
                 }
             }
@@ -73,14 +73,14 @@ final class TaskFetchOriginalImageData: ImagePipelineTask<(Data, URLResponse?)> 
         let dataLoader = pipeline.delegate.dataLoader(for: request, pipeline: pipeline)
         let dataTask = dataLoader.loadData(with: urlRequest, didReceiveData: { [weak self] data, response in
             guard let self = self else { return }
-            self.async {
+            self.pipeline.queue.async {
                 self.dataTask(didReceiveData: data, response: response)
             }
         }, completion: { [weak self] error in
             finish() // Finish the operation!
             guard let self = self else { return }
             signpost(self, "LoadImageData", .end, "Finished with size \(Formatter.bytes(self.data.count))")
-            self.async {
+            self.pipeline.queue.async {
                 self.dataTaskDidFinish(error: error)
             }
         })
@@ -109,7 +109,11 @@ final class TaskFetchOriginalImageData: ImagePipelineTask<(Data, URLResponse?)> 
         }
 
         // Append data and save response
-        data.append(chunk)
+        if data.isEmpty {
+            data = chunk
+        } else {
+            data.append(chunk)
+        }
         urlResponse = response
 
         let progress = TaskProgress(completed: Int64(data.count), total: response.expectedContentLength + resumedDataCount)
@@ -167,13 +171,21 @@ extension ImagePipelineTask where Value == (Data, URLResponse?) {
     }
 
     private func shouldStoreDataInDiskCache() -> Bool {
-        guard (request.url?.isCacheable ?? false) || (request.publisher != nil) else {
-            return false
-        }
-        let policy = pipeline.configuration.dataCachePolicy
         guard imageTasks.contains(where: { !$0.request.options.contains(.disableDiskCacheWrites) }) else {
             return false
         }
-        return policy == .storeOriginalData || policy == .storeAll || (policy == .automatic && imageTasks.contains { $0.request.processors.isEmpty })
+        guard !(request.url?.isLocalResource ?? false) else {
+            return false
+        }
+        switch pipeline.configuration.dataCachePolicy {
+        case .automatic:
+            return imageTasks.contains { $0.request.processors.isEmpty }
+        case .storeOriginalData:
+            return true
+        case .storeEncodedImages:
+            return false
+        case .storeAll:
+            return true
+        }
     }
 }

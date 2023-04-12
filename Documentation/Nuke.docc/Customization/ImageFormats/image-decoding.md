@@ -18,7 +18,7 @@ public protocol ImageDecoding {
 }
 ```
 
-``ImageContainer`` is a struct that wraps the decoded image itself along with (optionally) the original data and some additional information. The decoder decides what to attach to the container.
+``ImageContainer`` is a struct that wraps the decoded image and (optionally) the original data and some additional information. The decoder decides what to attach to the container.
 
 ```swift
 public struct ImageContainer {
@@ -70,9 +70,9 @@ When you register a decoder, you have access to ``ImageDecodingContext`` for the
 
 ## Rendering Engines
 
-The decoders in Nuke work at download time - regular decoders produce images as data arrives, while progressive decoders can produce multiple previews before delivering the final images. There are, however, scenarios when decoding at download time doesn't work: for example, for animated images.
+The decoders in Nuke work at download time - regular decoders produce images as data arrives, while progressive decoders can produce multiple previews before delivering the final images. But there are scenarios when decoding at download time doesn't work: for example, for animated images.
 
-For animated images, it is not feasible to decode all of the frames and put them in memory as bitmaps at download time – it will just consume too much memory. You have to postpone decoding to rendering time. When the image is displayed, a rendering engine, like [Gifu](https://github.com/kaishin/Gifu) or others, will decode and cache image frames on demand.
+For animated images, it is not feasible to decode all of the frames and put them in memory as bitmaps at download time – it will consume too much memory. You have to postpone decoding to rendering time. When the image is displayed, a rendering engine, like [Gifu](https://github.com/kaishin/Gifu) or others, will decode and cache image frames on demand.
 
 > GIF is not an efficient format. It is recommended to use short MP4 clips instead. See [Nuke Demo](https://github.com/kean/NukeDemo) for an example.
 

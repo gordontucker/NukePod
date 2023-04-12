@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 //
-// Copyright (c) 2015-2022 Alexander Grebenyuk (github.com/kean).
+// Copyright (c) 2015-2023 Alexander Grebenyuk (github.com/kean).
 
 import XCTest
 import Security
@@ -331,6 +331,23 @@ class DataCacheTests: XCTestCase {
         // When/Then
         let data = cache.cachedData(for: "key")
         XCTAssertEqual(data, blob)
+    }
+
+    // MARK: Compression
+
+    func testCompression() throws {
+        // GIVEN
+        cache.isCompressionEnabled = true
+
+        // WHEN
+        cache["key"] = Test.data
+        XCTAssertEqual(cache["key"], Test.data)
+        cache.flush()
+        XCTAssertEqual(cache["key"], Test.data)
+
+        // THEN
+        let raw = try Data(contentsOf: XCTUnwrap(cache.url(for: "key")))
+        XCTAssertTrue(raw.count < Test.data.count)
     }
 
     // MARK: Flush

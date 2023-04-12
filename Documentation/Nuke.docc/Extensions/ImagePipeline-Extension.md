@@ -2,7 +2,7 @@
 
 ## Creating a Pipeline
 
-You can start by using a ``ImagePipeline/shared`` pipeline and can create a custom one later if needed. To create a custom pipeline, you can use a convenience ``ImagePipeline/init(delegate:_:)`` initializer:
+You can start using a ``ImagePipeline/shared`` pipeline and create a custom one later if needed. To create a custom pipeline, you can use a convenience ``ImagePipeline/init(delegate:_:)`` initializer:
 
 ```swift
 ImagePipeline {
@@ -17,47 +17,23 @@ You can customize ``ImagePipeline`` by initializing it with ``ImagePipeline/Conf
 
 ## Loading Images
 
-Use ``ImagePipeline/image(for:delegate:)-2v6n0`` that works with both `URL` and ``ImageRequest`` and returns an ``ImageResponse`` with an image in case of success.
+Use ``ImagePipeline/image(for:)-4akzh`` that works with both `URL` and ``ImageRequest`` and returns an image.
 
 ```swift
-let response = try await ImagePipeline.shared.image(for: url)
-let image = response.image
+let image = try await ImagePipeline.shared.image(for: url)
 ```
 
-You can monitor the request by passing ``ImageTaskDelegate``. The delegate is captured as a weak reference and all callbacks are executed on the main queue by default.
+Alternatively, you can create an ``AsyncImageTask`` and access its ``AsyncImageTask/image`` or ``AsyncImageTask/response`` to fetch the image. You can use ``AsyncImageTask`` to cancel the request, change the priority of the running task, and observe its progress.
 
 ```swift
-final class AsyncImageView: UIImageView, ImageTaskDelegate {
-    private var imageTask: ImageTask?
-
+final class AsyncImageView: UIImageView {
     func loadImage() async throws {
-        imageView.image = try await pipeline.image(for: url, delegate: self).image
+        let imageTask = ImagePipeline.shared.imageTask(with: url)
+        for await progress in imageTask.progress {
+            // Update progress
+        }
+        imageView.image = try await imageTask.image
     }
-
-    func imageTaskCreated(_ task: ImageTask) {
-        self.imageTask = task
-    }
-
-    func imageTask(_ task: ImageTask, didReceivePreview response: ImageResponse) {
-        // Gets called for images that support progressive decoding.
-    }
-
-    func imageTask(_ task: ImageTask, didUpdateProgress progress: ImageTask.Progress) {
-        // Gets called when the download progress is updated.
-    }
-}
-```
-
-You can use `ImageTask` returned by the delegate to cancel the request, change the priority of the running task, and observe its progress. But you can also the request by using Swift [`Task`](https://developer.apple.com/documentation/swift/task):
-
-```swift
-func loadImage() async throws {
-    let task = Task {
-        try await pipeline.image(for: url)
-    }
-
-    // Later
-    task.cancel()
 }
 ```
 
@@ -77,7 +53,7 @@ You can also replace `URLCache` with a custom ``DataCache`` that ignores HTTP `c
 ImagePipeline.shared = ImagePipeline(configuration: .withDataCache)
 ```
 
-``DataCache`` is a bit faster than `URLCache` and provides more control. For example, it can be configured to store processed images using ``ImagePipeline/Configuration-swift.struct/dataCachePolicy-swift.property``. The downside is that without HTTP `cache-control`, the images never get validated and if the URL content changes, the app will continue showing stale data.  
+``DataCache`` is a bit faster than `URLCache` and provides more control. For example, it can be configured to store processed images using ``ImagePipeline/Configuration-swift.struct/dataCachePolicy``. The downside is that without HTTP `cache-control`, the images never get validated and if the URL content changes, the app will continue showing stale data.  
 
 > Tip: To learn more about caching, see <doc:caching> section.
 
@@ -107,7 +83,7 @@ If progressive decoding is enabled, the pipeline attempts to produce a preview o
 
 When the pipeline downloads the first chunk of data, it creates an instance of a decoder used for the entire image loading session. When the new chunks are loaded, the pipeline passes them to the decoder. The decoder can either produce a preview or return `nil` if not enough data is downloaded.
 
-Every image preview goes through the same processing and decompression phases that the final images do. The main difference is the introduction of backpressure. If one of the stages can’t process the input fast enough, then the pipeline waits until the current operation is finished, and only then starts the next one. When the data is fully downloaded, all outstanding progressive operations are canceled to save processing time.
+Every image preview goes through the same processing and decompression phases as the final images. The main difference is the introduction of backpressure. If one of the stages can't process the input fast enough, the pipeline waits until the current operation is finished, and only then the next one starts. All outstanding progressive operations are canceled to save processing time when the data is fully downloaded.
 
 ## Topics
 
@@ -125,20 +101,30 @@ Every image preview goes through the same processing and decompression phases th
 - ``configuration-swift.property``
 - ``Configuration-swift.struct``
 
-### Loading Images
+### Loading Images (Async/Await)
 
-- ``image(for:delegate:)-9mq8k``
-- ``image(for:delegate:)-2v6n0``
-- ``loadImage(with:completion:)``
-- ``loadImage(with:queue:progress:completion:)``
+- ``image(for:)-4akzh``
+- ``image(for:)-9egg6``
+- ``imageTask(with:)-7s0fc``
+- ``imageTask(with:)-6aagk``
+
+### Loading Images (Combine)
+
 - ``imagePublisher(with:)-8j2bd``
 - ``imagePublisher(with:)-3pzm6``
+
+### Loading Images (Closures)
+
+- ``loadImage(with:completion:)-6q74f``
+- ``loadImage(with:completion:)-43osv``
+- ``loadImage(with:queue:progress:completion:)``
 
 ### Loading Data
 
 - ``data(for:)-86rhw``
 - ``data(for:)-54h5g``
-- ``loadData(with:completion:)``
+- ``loadData(with:completion:)-815rt``
+- ``loadData(with:completion:)-6cwk3``
 - ``loadData(with:queue:progress:completion:)``
 
 ### Accessing Cached Images

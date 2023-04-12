@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 //
-// Copyright (c) 2015-2022 Alexander Grebenyuk (github.com/kean).
+// Copyright (c) 2015-2023 Alexander Grebenyuk (github.com/kean).
 
 import XCTest
 @testable import Nuke
@@ -41,10 +41,10 @@ final class ImagePrefetcherTests: XCTestCase {
         dataLoader.isSuspended = true
 
         expect(prefetcher.queue).toEnqueueOperationsWithCount(1)
-        prefetcher.startPrefetching(with: [Test.url])
+        prefetcher.startPrefetching(with: [Test.request])
         wait()
 
-        expect(pipeline).toLoadImage(with: Test.url)
+        expect(pipeline).toLoadImage(with: Test.request)
         pipeline.queue.async {
             self.dataLoader.isSuspended = false
         }
@@ -239,6 +239,26 @@ final class ImagePrefetcherTests: XCTestCase {
         // WHEN/THEN
         expect(operation).toUpdatePriority(from: .low, to: .veryLow)
         prefetcher.priority = .veryLow
+        wait()
+    }
+
+    // MARK: DidComplete
+
+    func testDidCompleteIsCalled() {
+        let expectation = self.expectation(description: "PrefecherDidComplete")
+        prefetcher.didComplete = expectation.fulfill
+
+        prefetcher.startPrefetching(with: [Test.url])
+        wait()
+    }
+
+    func testDidCompleteIsCalledWhenImageCached() {
+        let expectation = self.expectation(description: "PrefecherDidComplete")
+        prefetcher.didComplete = expectation.fulfill
+
+        imageCache[Test.request] = Test.container
+
+        prefetcher.startPrefetching(with: [Test.request])
         wait()
     }
 

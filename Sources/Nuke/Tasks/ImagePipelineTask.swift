@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 //
-// Copyright (c) 2015-2022 Alexander Grebenyuk (github.com/kean).
+// Copyright (c) 2015-2023 Alexander Grebenyuk (github.com/kean).
 
 import Foundation
 
@@ -14,11 +14,6 @@ class ImagePipelineTask<Value>: AsyncTask<Value, ImagePipeline.Error> {
     init(_ pipeline: ImagePipeline, _ request: ImageRequest) {
         self.pipeline = pipeline
         self.request = request
-    }
-
-    /// Executes work on the pipeline synchronization queue.
-    func async(_ work: @Sendable @escaping () -> Void) {
-        pipeline.queue.async { work() }
     }
 }
 

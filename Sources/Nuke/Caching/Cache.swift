@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 //
-// Copyright (c) 2015-2022 Alexander Grebenyuk (github.com/kean).
+// Copyright (c) 2015-2023 Alexander Grebenyuk (github.com/kean).
 
 import Foundation
 
@@ -48,25 +48,17 @@ final class Cache<Key: Hashable, Value>: @unchecked Sendable {
 
         self.memoryPressure = DispatchSource.makeMemoryPressureSource(eventMask: [.warning, .critical], queue: .main)
         self.memoryPressure.setEventHandler { [weak self] in
-            self?.removeAll()
+            self?.removeAllCachedValues()
         }
         self.memoryPressure.resume()
 
 #if os(iOS) || os(tvOS)
-        self.registerForEnterBackground()
-#endif
-
-#if TRACK_ALLOCATIONS
-        Allocations.increment("Cache")
+        registerForEnterBackground()
 #endif
     }
 
     deinit {
         memoryPressure.cancel()
-
-#if TRACK_ALLOCATIONS
-        Allocations.decrement("Cache")
-#endif
     }
 
 #if os(iOS) || os(tvOS)
@@ -141,12 +133,12 @@ final class Cache<Key: Hashable, Value>: @unchecked Sendable {
         _totalCost -= node.value.cost
     }
 
-    func removeAll() {
+    func removeAllCachedValues() {
         lock.lock()
         defer { lock.unlock() }
 
         map.removeAll()
-        list.removeAll()
+        list.removeAllElements()
         _totalCost = 0
     }
 

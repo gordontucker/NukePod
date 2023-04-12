@@ -1,9 +1,11 @@
 // The MIT License (MIT)
 //
-// Copyright (c) 2015-2022 Alexander Grebenyuk (github.com/kean).
+// Copyright (c) 2015-2023 Alexander Grebenyuk (github.com/kean).
 
 import XCTest
 @testable import Nuke
+
+#if !os(watchOS) && !os(tvOS)
 
 class DataLoaderTests: XCTestCase {
     var sut: DataLoader!
@@ -53,9 +55,11 @@ class DataLoaderTests: XCTestCase {
         // WHEN
         let expectation = self.expectation(description: "DataLoaded")
         _ = sut.loadData(with: URLRequest(url: url), didReceiveData: { _, _ in }, completion: { _ in
-            expectation.fulfill()
+            DispatchQueue.main.async {
+                expectation.fulfill()
+            }
         })
-        wait()
+        wait(for: [expectation], timeout: 2.0)
 
         // THEN
         XCTAssertEqual(delegate.recordedMetrics.count, 1)
@@ -69,3 +73,5 @@ private final class MockSessionDelegate: NSObject, URLSessionTaskDelegate {
         recordedMetrics.append(metrics)
     }
 }
+
+#endif

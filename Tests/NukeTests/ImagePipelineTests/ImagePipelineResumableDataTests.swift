@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 //
-// Copyright (c) 2015-2022 Alexander Grebenyuk (github.com/kean).
+// Copyright (c) 2015-2023 Alexander Grebenyuk (github.com/kean).
 
 import XCTest
 @testable import Nuke
@@ -13,7 +13,7 @@ class ImagePipelineResumableDataTests: XCTestCase {
         super.setUp()
 
         dataLoader = _MockResumableDataLoader()
-        ResumableDataStorage.shared.removeAll()
+        ResumableDataStorage.shared.removeAllResponses()
         pipeline = ImagePipeline {
             $0.dataLoader = dataLoader
             $0.imageCache = nil

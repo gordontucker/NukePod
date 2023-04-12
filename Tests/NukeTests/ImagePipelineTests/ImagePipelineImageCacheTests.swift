@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 //
-// Copyright (c) 2015-2022 Alexander Grebenyuk (github.com/kean).
+// Copyright (c) 2015-2023 Alexander Grebenyuk (github.com/kean).
 
 import XCTest
 @testable import Nuke
@@ -100,7 +100,7 @@ class ImagePipelineImageCacheTests: XCTestCase {
 
     func testGeneratedThumbnailDataIsStoredIncache() throws {
         // When
-        let request = ImageRequest(url: Test.url, userInfo: [.thumbnailKey: ImageRequest.ThumbnailOptions(maxPixelSize: 400)])
+        let request = ImageRequest(url: Test.url, userInfo: [.thumbnailKey: ImageRequest.ThumbnailOptions(size: CGSize(width: 400, height: 400), unit: .pixels, contentMode: .aspectFit)])
         expect(pipeline).toLoadImage(with: request)
 
         // Then
@@ -382,32 +382,13 @@ class ImagePipelineCacheLayerPriorityTests: XCTestCase {
         wait()
         XCTAssertEqual(record.image?.nk_test_processorIDs, ["1", "2"])
         XCTAssertNil(record.response?.cacheType)
-
+        
         // THEN
         XCTAssertEqual(imageCache.readCount, 3) // Processed + intermediate + original
         XCTAssertEqual(imageCache.writeCount, 1) // Processed
         XCTAssertNotNil(imageCache[request])
         XCTAssertEqual(dataCache.readCount, 2) // Processed + original
         XCTAssertEqual(dataCache.writeCount, 0)
-        XCTAssertEqual(dataLoader.createdTaskCount, 1)
-    }
-
-    func _testGivenTwoRequestWhereOnlyOneHasDiskWritesDisabled() {
-        // WHEN
-        pipeline.resgiterMultipleRequests {
-            request.options.insert(.disableDiskCacheWrites)
-            expect(pipeline).toLoadImage(with: request)
-            request.options.remove(.disableDiskCacheWrites)
-            expect(pipeline).toLoadImage(with: request)
-        }
-        wait()
-
-        // THEN
-        XCTAssertEqual(imageCache.readCount, 6) // Processed + intermediate + original
-        XCTAssertEqual(imageCache.writeCount, 2) // Processed
-        XCTAssertNotNil(imageCache[request])
-        XCTAssertEqual(dataCache.readCount, 4) // Processed + original
-        XCTAssertEqual(dataCache.writeCount, 1)
         XCTAssertEqual(dataLoader.createdTaskCount, 1)
     }
 }
